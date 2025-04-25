@@ -1,11 +1,116 @@
-# RAG-SYSTEM
-This project implements a simple Retrieval-Augmented Generation (RAG) system in Python, allowing you to ask questions about your local documents. It leverages Ollama for running language models and embeddings, Langchain for orchestrating the RAG pipeline, and FAISS for efficient vector storage and retrieval.FeaturesDocument Loading: Load content from various document types.Text Splitting: Breaks down large documents into smaller, manageable chunks.Vector Embeddings: Converts text chunks into numerical representations using Ollama embeddings.Vector Storage: Uses FAISS to store and index the document embeddings for fast retrieval.Retrieval-Augmented Generation: Retrieves relevant document chunks based on a user query and uses an Ollama language model to generate an informed answer.Interactive Command Line Interface: Query your document directly from the terminal.How it WorksThe script prompts the user for the path to a document file.It loads the document content based on its file type.The document content is split into smaller text chunks.These text chunks are converted into vector embeddings using the specified Ollama embedding model.A FAISS vector store is created from these embeddings.When a user enters a query, the system retrieves the most relevant text chunks from the vector store.The retrieved chunks and the user's query are passed to the Ollama language model.The LLM generates an answer based on the provided context.The answer is displayed to the user.Technologies UsedPython: The core programming language.Langchain: Framework for developing applications powered by language models.Ollama: Runs language models and embeddings locally.FAISS: A library for efficient similarity search and clustering of dense vectors.langchain-community: Provides integrations for Ollama, FAISS, and document loaders.pypdf: (Required for PDF loading)unstructured[xlsx]: (Required for Excel loading)Supported File Types.txt (Text files).pdf (PDF documents).xls, .xlsx (Excel spreadsheets - loaded as elements)RequirementsPython 3.7+Ollama: Must be installed and running on your system.Download and install Ollama from ollama.com.Pull the required models:ollama pull gemma3:1b
+# 🧠 Ollama RAG QA System
+
+A Retrieval-Augmented Generation (RAG) based Question Answering system powered by Ollama, FAISS, and LangChain. This tool enables users to query their own documents using local LLMs and embedding models, with support for `.txt`, `.pdf`, `.xls`, and `.xlsx` files.
+
+---
+
+## 🚀 Features
+
+- 🔍 Load and parse documents from `.txt`, `.pdf`, `.xls`, or `.xlsx` formats
+- 🧠 Uses Ollama's local models for embeddings and LLM inference
+- ✂️ Splits documents into manageable chunks for vector storage
+- 🔎 FAISS-based vector search for fast and relevant retrieval
+- 🤖 Prompt-based QA with context-aware answering
+- 📂 Returns top-k relevant document chunks with answers
+- 💻 Fully local — no external API calls required
+
+---
+
+## 📦 Requirements
+
+Install the required packages:
+
+```bash
+pip install langchain faiss-cpu pypdf "unstructured[xlsx]"
+```
+
+Make sure you have **Ollama** installed and running.
+
+You should also install the required models:
+
+```bash
+ollama pull gemma3:1b
 ollama pull nomic-embed-text:latest
+```
 
-(Note: You can change the OLLAMA_LLM_MODEL_TAG and OLLAMA_EMBED_MODEL_TAG variables in the script to use different models.)Python Libraries: Install the necessary libraries using pip:pip install langchain-community langchain pypdf "unstructured[xlsx]" faiss-cpu
+---
 
-Getting StartedClone this repository (or save the code as a Python file, e.g., rag_qa.py).Ensure Ollama is installed and running, and you have pulled the required models (gemma3:1b and nomic-embed-text:latest by default).Install the Python dependencies:pip install langchain-community langchain pypdf "unstructured[xlsx]" faiss-cpu
+## 📁 Supported Document Types
 
-Run the Python script from your terminal:python rag_qa.py
+- `.txt`
+- `.pdf` (requires `pypdf`)
+- `.xls` / `.xlsx` (requires `unstructured[xlsx]`)
 
-When prompted, enter the full path to the document you want to query.Once the system is initialized, you can start entering your questions. Type exit or bye to quit.
+---
+
+## 🛠️ How It Works
+
+1. User provides a document path via input.
+2. The script:
+   - Loads the document using an appropriate loader.
+   - Splits the text into smaller chunks.
+   - Creates embeddings using Ollama.
+   - Stores them in a FAISS vector store.
+   - Initializes an LLM to answer queries.
+3. Users can interactively ask questions about their document.
+
+---
+
+## 💬 Usage
+
+```bash
+python rag_qa.py
+```
+
+You’ll be prompted to enter the path to your document. Once loaded and processed, you can enter questions based on its content.
+
+To exit, type `exit` or `bye`.
+
+---
+
+## 📸 Example Interaction
+
+```text
+Enter the path to your document (Supported File formats: txt, pdf, xls, xlsx): ./example.pdf
+...
+
+--- Ready to Query ---
+Enter 'exit' or 'bye' to quit.
+
+Enter your query: What is the main topic of the first section?
+
+--- Answer ---
+The first section discusses ...
+```
+
+---
+
+## ⚠️ Troubleshooting
+
+- Ensure Ollama is running before starting the script.
+- Verify the models (`gemma3:1b`, `nomic-embed-text:latest`) are installed.
+- For Excel support, install the extended unstructured package:
+  ```bash
+  pip install "unstructured[xlsx]"
+  ```
+
+---
+
+## 📚 Technologies Used
+
+- [LangChain](https://github.com/langchain-ai/langchain)
+- [FAISS](https://github.com/facebookresearch/faiss)
+- [Ollama](https://ollama.com/)
+- [PyPDF](https://pypi.org/project/pypdf/)
+---
+
+## 📄 License
+
+This project is licensed under the GNU General Public License.
+
+---
+
+## 🤝 Contributing
+
+Pull requests and feature suggestions are welcome! Please open an issue to discuss changes or improvements.
+
