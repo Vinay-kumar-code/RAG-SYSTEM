@@ -1,116 +1,78 @@
-# 🧠 Ollama RAG QA System
+# RAG Chat Web App
 
-A Retrieval-Augmented Generation (RAG) based Question Answering system powered by Ollama, FAISS, and LangChain. This tool enables users to query their own documents using local LLMs and embedding models, with support for `.txt`, `.pdf`, `.xls`, and `.xlsx` files.
+Single-user RAG web application with:
+- Multiple RAG stores (build from uploaded PDF/TXT/CSV/XLSX)
+- Per-session generation model selection (Ollama)
+- Source preview
+- Semantic search inside selected store
+- Export chat as text
+- Error reveal button (only shows when errors occur)
 
----
+## Quick Start
 
-## 🚀 Features
-
-- 🔍 Load and parse documents from `.txt`, `.pdf`, `.xls`, or `.xlsx` formats
-- 🧠 Uses Ollama's local models for embeddings and LLM inference
-- ✂️ Splits documents into manageable chunks for vector storage
-- 🔎 FAISS-based vector search for fast and relevant retrieval
-- 🤖 Prompt-based QA with context-aware answering
-- 📂 Returns top-k relevant document chunks with answers
-- 💻 Fully local — no external API calls required
-
----
-
-## 📦 Requirements
-
-Install the required packages:
+1) Install dependencies
 
 ```bash
-pip install langchain faiss-cpu pypdf "unstructured[xlsx]"
+pip install -U fastapi uvicorn langchain langchain-community faiss-cpu pypdf "unstructured[xlsx]" ollama python-multipart pandas
 ```
 
-Make sure you have **Ollama** installed and running.
-
-You should also install the required models:
+2) Start the server
 
 ```bash
-ollama pull gemma3:1b
-ollama pull nomic-embed-text:latest
+uvicorn rag.server.server:app --reload --port 8000
 ```
 
----
+3) Open the web UI
 
-## 📁 Supported Document Types
+- http://localhost:8000
 
-- `.txt`
-- `.pdf` (requires `pypdf`)
-- `.xls` / `.xlsx` (requires `unstructured[xlsx]`)
+## Create a Store
+1. Expand "Create RAG Store"
+2. Provide store id and upload a file
+3. Optionally change the embedding model (default: nomic-embed-text)
+4. Click Build
+5. Select the store from dropdown
 
----
+## Chat
+1. Pick an Ollama model (from the Model dropdown)
+2. Pick a store
+3. Ask a question
+4. View sources (expand the cards)
+5. Export transcript with the Export button
 
-## 🛠️ How It Works
+## Semantic Search
+- Use the top search box to find chunks in the currently selected store.
 
-1. User provides a document path via input.
-2. The script:
-   - Loads the document using an appropriate loader.
-   - Splits the text into smaller chunks.
-   - Creates embeddings using Ollama.
-   - Stores them in a FAISS vector store.
-   - Initializes an LLM to answer queries.
-3. Users can interactively ask questions about their document.
-
----
-
-## 💬 Usage
-
-```bash
-python rag_qa.py
+## Folder Layout
+```
+rag/
+  server/server.py       # FastAPI app + RAG endpoints
+  client/
+    templates/index.html # Web UI
+    static/{app.js,styles.css}
+  stores/                # Auto-created. FAISS index per store + <store_id>.meta.json
 ```
 
-You’ll be prompted to enter the path to your document. Once loaded and processed, you can enter questions based on its content.
+## Notes
+- Only the generation model is selectable per session (embedding model is stored with the RAG store meta)
+- No authentication (single user)
+- Chat history not persisted after reload
+- Error button appears only when an error occurs
+- Requires Ollama running locally with desired models pulled (e.g., `ollama pull llama3`)
 
-To exit, type `exit` or `bye`.
+## Troubleshooting
 
----
+- Models list empty or chat errors
+  - Ensure Ollama is installed and running.
+  - Pull models: `ollama pull llama3`; `ollama pull nomic-embed-text`.
+  - Verify: `ollama list` shows your models.
+  - Restart the server after installing models.
 
-## 📸 Example Interaction
+- Chat returns Generation failed
+  - Check server logs; error usually indicates Ollama not running or model missing.
+  - Try a simpler model name that exists in `ollama list`.
 
-```text
-Enter the path to your document (Supported File formats: txt, pdf, xls, xlsx): ./example.pdf
-...
-
---- Ready to Query ---
-Enter 'exit' or 'bye' to quit.
-
-Enter your query: What is the main topic of the first section?
-
---- Answer ---
-The first section discusses ...
-```
-
----
-
-## ⚠️ Troubleshooting
-
-- Ensure Ollama is running before starting the script.
-- Verify the models (`gemma3:1b`, `nomic-embed-text:latest`) are installed.
-- For Excel support, install the extended unstructured package:
-  ```bash
-  pip install "unstructured[xlsx]"
-  ```
-
----
-
-## 📚 Technologies Used
-
-- [LangChain](https://github.com/langchain-ai/langchain)
-- [FAISS](https://github.com/facebookresearch/faiss)
-- [Ollama](https://ollama.com/)
-- [PyPDF](https://pypi.org/project/pypdf/)
----
-
-## 📄 License
-
-This project is licensed under the GNU General Public License.
-
----
-
-## 🤝 Contributing
-
-Pull requests and feature suggestions are welcome! Please open an issue to discuss changes or improvements.
+- Build store fails on uploads
+  - Make sure `python-multipart` is installed.
+  - For CSV/XLSX parsing, ensure `pandas` and `unstructured[xlsx]` are installed.
 
