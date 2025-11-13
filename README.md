@@ -6,10 +6,13 @@ A powerful Retrieval-Augmented Generation (RAG) system built with Streamlit and 
 
 - **Multi-format Document Support**: Upload and process `.txt`, `.pdf`, `.xlsx`, and `.xls` files
 - **Local AI Processing**: Uses Ollama for both LLM and embedding models (no API keys required)
+- **Auto-detect Ollama Models**: Automatically fetches and displays available Ollama models for selection
+- **Vector Store Management**: Save and load previously created vector stores for reuse
 - **Interactive Chat Interface**: Clean, user-friendly chat interface for document Q&A
 - **Smart Document Processing**: Automatic text splitting and vector store creation
 - **Persistent Chat History**: Maintains conversation context within sessions
-- **Configurable Models**: Easy model selection through sidebar controls
+- **Model Selection Interface**: Easy model selection through dropdown menus
+- **Vector Store Persistence**: Save vector stores to avoid reprocessing documents
 - **Error Handling**: Comprehensive error handling with user-friendly messages
 
 ## 🛠️ Technology Stack
@@ -43,9 +46,11 @@ pip install streamlit langchain langchain-community faiss-cpu pypdf unstructured
 
 ### 3. Set Up Ollama Models
 ```bash
-# Install default models (or use your preferred models)
-ollama pull gemma2:2b
-ollama pull nomic-embed-text:latest
+# Install models (the app will auto-detect these)
+ollama pull gemma2:2b          # or any LLM model you prefer
+ollama pull llama3.1:8b        # alternative LLM model
+ollama pull nomic-embed-text:latest    # embedding model
+ollama pull mxbai-embed-large:latest   # alternative embedding model
 ```
 
 ### 4. Run the Application
@@ -58,38 +63,48 @@ Open your browser and navigate to `http://localhost:8501`
 
 ## 🎯 Usage
 
-1. **Configure Models** (Optional)
-   - Use the sidebar to specify your preferred Ollama models
-   - Default: `gemma2:2b` for LLM and `nomic-embed-text:latest` for embeddings
+1. **Model Selection**
+   - The app automatically detects and displays available Ollama models
+   - Use the sidebar to select your preferred LLM and embedding models
+   - Click "🔄 Refresh Models" to update the model list
 
-2. **Upload Document**
-   - Click "Browse files" or drag and drop your document
-   - Supported formats: TXT, PDF, XLSX, XLS
+2. **Document Processing**
+   - Upload a document using the file uploader
+   - Optionally check "💾 Save vector store for future use" and provide a name
    - Wait for processing confirmation
 
-3. **Ask Questions**
+3. **Vector Store Management**
+   - Load previously saved vector stores from the sidebar
+   - Manage (view/delete) existing vector stores in the expandable section
+   - Avoid reprocessing the same documents by reusing saved vector stores
+
+4. **Ask Questions**
    - Type your question in the chat input
    - Get contextual answers based on your document content
    - Continue the conversation with follow-up questions
 
+5. **Session Information**
+   - View current session details in the "ℹ️ Current Session Info" section
+   - See which models and data sources are currently active
+
 ## ⚙️ Configuration
 
 ### Model Configuration
-You can customize the models used by the system:
+The app automatically detects available Ollama models. You can:
+- Select models from dropdown menus in the sidebar
+- Refresh the model list using the "🔄 Refresh Models" button
+- Fall back to manual input if auto-detection fails
 
+### Vector Store Settings
 ```python
-# In the sidebar or directly in the code
-OLLAMA_LLM_MODEL_TAG = "your-preferred-llm-model"
-OLLAMA_EMBED_MODEL_TAG = "your-preferred-embedding-model"
+VECTOR_STORES_DIR = "vector_stores"  # Directory for saved vector stores
+NUM_CHUNKS_TO_RETRIEVE = 3          # Number of document chunks to retrieve
+chunk_size = 500                    # Size of text chunks
+chunk_overlap = 50                  # Overlap between chunks
 ```
 
-### Retrieval Settings
-Modify retrieval parameters in the code:
-```python
-NUM_CHUNKS_TO_RETRIEVE = 3  # Number of document chunks to retrieve
-chunk_size = 500           # Size of text chunks
-chunk_overlap = 50         # Overlap between chunks
-```
+### Ollama Connection
+The app connects to Ollama at `http://localhost:11434` by default. Ensure Ollama is running on this address.
 
 ## 🏗️ Architecture
 
@@ -109,6 +124,33 @@ chunk_overlap = 50         # Overlap between chunks
                        │   FAISS Vector   │
                        │   Store          │
                        └──────────────────┘
+```
+
+## 🚀 New Features
+
+### 🎯 Model Auto-Detection
+- Automatically fetches available Ollama models via API
+- Separates LLM models from embedding models
+- Provides fallback manual input if connection fails
+
+### 💾 Vector Store Management
+- **Save Vector Stores**: Persist processed documents for future use
+- **Load Existing Stores**: Quickly access previously processed documents
+- **Store Management**: View and delete saved vector stores
+- **Avoid Reprocessing**: Save time by reusing vector stores
+
+### 🔧 Enhanced UI
+- **Dropdown Model Selection**: Easy model switching
+- **Session Information**: View current configuration and data source
+- **Store Management Panel**: Organize your saved vector stores
+- **Status Indicators**: Clear feedback on operations
+
+```python
+# Save a vector store when processing a document
+save_vector_store_option = st.checkbox("💾 Save vector store for future use")
+
+# Load from existing store
+selected_store = st.selectbox("Load Previously Created Vector Store", saved_stores)
 ```
 
 ## 🚀 Advanced Usage
@@ -212,4 +254,4 @@ If you encounter any issues or have questions:
 
 ---
 
-**Made with ❤️ by [Your Name]**
+**Made with ❤️ by [Vinay Kumar Balisetti]**
