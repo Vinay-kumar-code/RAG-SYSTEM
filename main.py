@@ -102,6 +102,7 @@ def compute_file_id(file_bytes: bytes, filename: str) -> str:
     h.update(filename.encode("utf-8"))
     return h.hexdigest()
 
+@st.cache_data(ttl=60)  # Cache for 60 seconds
 def get_saved_vector_stores():
     """Get list of previously saved FAISS vector store directories."""
     req = _new_req_id()
@@ -245,8 +246,6 @@ def get_ollama_llm(_model_tag):
     logger.info(f"[{req}] Initializing Ollama LLM model='{_model_tag}'")
     try:
         llm = Ollama(model=_model_tag)
-        # Quick verification
-        _ = llm.invoke("Hello!")
         dt = (time.time() - t0) * 1000
         logger.info(f"[{req}] LLM ready (took {dt:.1f} ms)")
         return llm
@@ -264,8 +263,6 @@ def get_ollama_embeddings(_model_tag):
     logger.info(f"[{req}] Initializing Ollama Embeddings model='{_model_tag}'")
     try:
         embeddings = OllamaEmbeddings(model=_model_tag)
-        # Quick verification
-        _ = embeddings.embed_query("Test embedding.")
         dt = (time.time() - t0) * 1000
         logger.info(f"[{req}] Embeddings ready (took {dt:.1f} ms)")
         return embeddings
@@ -282,43 +279,43 @@ def load_document(uploaded_file):
     req = _new_req_id()
     logger.info(f"[{req}] Loading uploaded file name='{uploaded_file.name}' size={len(uploaded_file.getvalue())} bytes")
     docs = []
-    temp_dir = tempfile.TemporaryDirectory()
-    temp_path = os.path.join(temp_dir.name, uploaded_file.name)
 
-    # Save the uploaded file temporarily
-    with open(temp_path, "wb") as f:
-        f.write(uploaded_file.getvalue())
+    # Use context manager for proper cleanup
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = os.path.join(temp_dir, uploaded_file.name)
 
-    file_extension = os.path.splitext(temp_path)[1].lower()
-    logger.info(f"[{req}] Detected extension {file_extension}; temp path={temp_path}")
+        # Save the uploaded file temporarily
+        with open(temp_path, "wb") as f:
+            f.write(uploaded_file.getvalue())
 
-    try:
-        if file_extension == ".pdf":
-            loader = PyPDFLoader(temp_path)
-        elif file_extension in [".xlsx", ".xls"]:
-            loader = UnstructuredExcelLoader(temp_path, mode="elements")
-        elif file_extension == ".txt":
-            loader = TextLoader(temp_path, encoding='utf-8')
-        else:
-            st.warning(f"Unsupported file extension '{file_extension}'. Attempting to load as text.", icon="⚠️")
-            loader = TextLoader(temp_path, encoding='utf-8', autodetect_encoding=True)
+        file_extension = os.path.splitext(temp_path)[1].lower()
+        logger.info(f"[{req}] Detected extension {file_extension}; temp path={temp_path}")
 
-        docs = loader.load()
-        if not docs:
-            raise ValueError("Document is empty or could not be loaded.")
-        logger.info(f"[{req}] Loaded {len(docs)} document sections/pages/rows")
+        try:
+            if file_extension == ".pdf":
+                loader = PyPDFLoader(temp_path)
+            elif file_extension in [".xlsx", ".xls"]:
+                loader = UnstructuredExcelLoader(temp_path, mode="elements")
+            elif file_extension == ".txt":
+                loader = TextLoader(temp_path, encoding='utf-8')
+            else:
+                st.warning(f"Unsupported file extension '{file_extension}'. Attempting to load as text.", icon="⚠️")
+                loader = TextLoader(temp_path, encoding='utf-8', autodetect_encoding=True)
 
-    except ImportError as e:
-        logger.exception(f"[{req}] Import error while loading: {e}")
-        st.error(f"Import Error: {e}. Library missing for {file_extension} files.", icon="🚨")
-        st.info("Install required libraries: `pip install pypdf 'unstructured[xlsx]'`")
-        docs = None
-    except Exception as e:
-        logger.exception(f"[{req}] Error loading document: {e}")
-        st.error(f"Error loading document: {e}", icon="🚨")
-        docs = None
-    finally:
-        temp_dir.cleanup()
+            docs = loader.load()
+            if not docs:
+                raise ValueError("Document is empty or could not be loaded.")
+            logger.info(f"[{req}] Loaded {len(docs)} document sections/pages/rows")
+
+        except ImportError as e:
+            logger.exception(f"[{req}] Import error while loading: {e}")
+            st.error(f"Import Error: {e}. Library missing for {file_extension} files.", icon="🚨")
+            st.info("Install required libraries: `pip install pypdf 'unstructured[xlsx]'`")
+            docs = None
+        except Exception as e:
+            logger.exception(f"[{req}] Error loading document: {e}")
+            st.error(f"Error loading document: {e}", icon="🚨")
+            docs = None
 
     return docs
 
@@ -339,7 +336,8 @@ def create_vector_store(_docs, _embeddings, save_name=None):
         return None
 
     try:
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+        # Use larger chunk size for better performance
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
         texts = text_splitter.split_documents(_docs)
         logger.info(f"[{req}] Split into {len(texts)} chunks")
         if not texts:
@@ -473,15 +471,6 @@ if uploaded_file is not None:
         embeddings = get_ollama_embeddings(OLLAMA_EMBED_MODEL_TAG)
 
         if llm and embeddings:
-            # Ensure the selected embedding model supports embeddings
-            try:
-                _ = embeddings.embed_query("health check")
-                logger.info(f"[{req}] Embedding model health check OK")
-            except Exception as e:
-                logger.exception(f"[{req}] Embedding model failed health check: {e}")
-                st.error(f"The selected embedding model '{OLLAMA_EMBED_MODEL_TAG}' failed to embed: {e}", icon="🚨")
-                st.stop()
-
             docs = load_document(uploaded_file)
             if docs:
                 save_name = vector_store_name if (save_vector_store_option and vector_store_name) else None
@@ -536,9 +525,15 @@ if saved_stores:
                         import shutil
                         if os.path.isdir(store_path):
                             shutil.rmtree(store_path)
+                        # Clear cache to reflect deletion
+                        get_saved_vector_stores.clear()
                         st.success(f"Deleted vector store '{store}'")
                         st.rerun()
+                    except PermissionError as e:
+                        logger.exception(f"Permission error deleting vector store '{store}': {e}")
+                        st.error(f"Permission error: Cannot delete '{store}'. Ensure it's not in use.")
                     except Exception as e:
+                        logger.exception(f"Error deleting vector store '{store}': {e}")
                         st.error(f"Error deleting vector store: {e}")
 
 
